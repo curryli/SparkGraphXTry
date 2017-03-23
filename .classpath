@@ -76,5 +76,24 @@
 	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hdfs/protobuf-java-2.5.0.jar"/>
 	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hdfs/slf4j-api-1.7.5.jar"/>
 	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hdfs/slf4j-log4j12.jar"/>
+	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hive jdbc/hive-accumulo-handler-1.1.0-cdh5.6.0.jar"/>
+	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hive jdbc/hive-ant-1.1.0-cdh5.6.0.jar"/>
+	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hive jdbc/hive-beeline-1.1.0-cdh5.6.0.jar"/>
+	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hive jdbc/hive-cli-1.1.0-cdh5.6.0.jar"/>
+	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hive jdbc/hive-common-1.1.0-cdh5.6.0.jar"/>
+	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hive jdbc/hive-contrib-1.1.0-cdh5.6.0.jar"/>
+	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hive jdbc/hive-exec-1.1.0-cdh5.6.0.jar"/>
+	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hive jdbc/hive-hbase-handler-1.1.0-cdh5.6.0.jar"/>
+	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hive jdbc/hive-hwi-1.1.0-cdh5.6.0.jar"/>
+	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hive jdbc/hive-jdbc-1.1.0-cdh5.6.0.jar"/>
+	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hive jdbc/hive-metastore-1.1.0-cdh5.6.0.jar"/>
+	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hive jdbc/hive-serde-1.1.0-cdh5.6.0.jar"/>
+	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hive jdbc/hive-service-1.1.0-cdh5.6.0.jar"/>
+	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hive jdbc/hive-shims-0.23.jar"/>
+	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hive jdbc/hive-shims-0.23-1.1.0-cdh5.6.0.jar"/>
+	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hive jdbc/hive-shims-1.1.0-cdh5.6.0.jar"/>
+	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hive jdbc/hive-shims-common-1.1.0-cdh5.6.0.jar"/>
+	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hive jdbc/hive-shims-scheduler-1.1.0-cdh5.6.0.jar"/>
+	<classpathentry kind="lib" path="D:/scala-SDK-4.3.0-vfinal-2.11-win32.win32.x86_64/eclipse/hadoopjar/hive jdbc/hive-testutils-1.1.0-cdh5.6.0.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
