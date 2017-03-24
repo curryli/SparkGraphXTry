@@ -14,7 +14,7 @@ import scala.Range
 import org.apache.spark.graphx._
 import org.apache.spark.rdd.RDD
 
-object cyclesFromConnect {
+object strongCC {
   class VertexProperty()
   class EdgePropery()
 
@@ -24,7 +24,7 @@ object cyclesFromConnect {
   case class TransferProperty(val transAt: Int, val transDt: String) extends EdgePropery
 
   private var trace = MutableList[Long]()
-  var visited:scala.collection.mutable.Map[Long,Boolean] = scala.collection.mutable.Map[Long,Boolean]()
+  var visited:scala.collection.mutable.Map[Long,Boolean] = scala.collection.mutable.Map()
   
   // The graph might then have the type:
   var graph: Graph[VertexProperty, EdgePropery] = null
@@ -96,7 +96,7 @@ object cyclesFromConnect {
     var g = Graph(cardRDD, transferRelationRDD).partitionBy(PartitionStrategy.RandomVertexCut)
 
     //3.1  边聚合
-    g = g.groupEdges((a, b) => new TransferProperty(a.transAt+b.transAt, a.transDt))
+    //    g = g.groupEdges((a, b) => new TransferProperty(a.transAt + b.transAt, a.count + b.count, a.transDt.substring(0, 10)))
 
     //3.2 计算出入度
     val degreeGraph = g.outerJoinVertices(g.inDegrees) {
@@ -126,85 +126,14 @@ object cyclesFromConnect {
 
     //4 计算联通图
     //    gV2.connectedComponents()
-    val ccGraph = ConnectedComponents.run(gV2)
-    val graphCount = ccGraph.vertices.map(f => (f._2, 1)).reduceByKey(_ + _).sortBy(f => f._2, false, 1) //标签计数  ccGraph.vertices  (顶点名，团体名)
-    println("ccGraph count:\t" + graphCount.count)
-    println("ccGraph edges count:\t" + ccGraph.numEdges)
+    val scGraph = gV2.stronglyConnectedComponents(5)
+    val graphCount = scGraph.vertices.map(f => (f._2, 1)).reduceByKey(_ + _).sortBy(f => f._2, false, 1) //标签计数  ccGraph.vertices  (顶点名，团体名)
+    println("scGraph count:\t" + graphCount.count)
+    println("scGraph edges count:\t" + scGraph.numEdges)
     
-    val testcc = graphCount.take(10).map(f=>f._1)
-    val community_test = testcc(9)
-    //val testGraph = ccGraph.subgraph(vpred = (vid, cc) => testcc.contains(cc))
-    val testGraph = ccGraph.subgraph(vpred = (vid, cc) => cc==community_test)
      
-    println("testGraph vertices count:\t" +testGraph.numVertices)
-    println("testGraph edges count:\t" +testGraph.numEdges)
-    
-    println("testGraph done in " + (System.currentTimeMillis()-startTime)/(1000*60) + " minutes.")
-    
-    
-    val gV = testGraph.vertices
-    val gE = testGraph.edges
-    gE.collect().foreach {println}
-   
-    val gVList = gV.collect          //要先转化成数组，不要在RDD的foreach里面复制，否则不起任何作用
-    gVList.foreach{vp=>    //初始化
-      visited += (vp._1.toLong -> false)
-    }
-//    println("Initialized visited: ")
-//    visited.foreach(println) 
-    
-    trace.clear()
-    
-    val startPoint = gV.first()._1.toLong
-    
-    println("Starting find from " + startPoint + ": ")
-    findCycle(sc, startPoint, gV, gE)
-    
     println("All done in " + (System.currentTimeMillis()-startTime)/(1000*60) + " minutes.")
   }
   
-  
-  def findCycle(sc: SparkContext, Vid: Long, gV: VertexRDD[VertexId], gE: EdgeRDD[cyclesFromConnect.TransferProperty]) 
-    {
-//        println("current visited: ")
-//        visited.foreach(println)
-        //val v = mapRDD.lookup(Vid)(0)
-        if(visited(Vid)==true)
-        {
-            
-            if(trace.contains(Vid))
-            {
-                //println("In find " + v.toInt)
-                var j = trace.indexOf(Vid)
-                println("Cycle:");
-                while(j<trace.length)
-                {
-                    print(trace(j)+" ");
-                    j = j+1;
-                }
-                println("\n");
-                return;
-            }
-            return;
-        }
-        
-        //println("current Vid: " + Vid)
-        visited(Vid)=true;
-        trace.+=(Vid);
-        
-        val Vlist = gV.collect()
-        
-        Vlist.foreach{rdd=> 
-          var new_vid = rdd._1.toLong
-          //println("i is : " + i)
-          val pairs = gE.map(e=>(e.srcId,e.dstId))
-          if(pairs.filter(f=>f._1==Vid & f._2==new_vid).count!=0)
-                findCycle(sc,new_vid.toLong, gV, gE);
-        }
-  
-        //println(trace)
-        trace = trace.dropRight(1);
-    }
-  
-
+   
 }
