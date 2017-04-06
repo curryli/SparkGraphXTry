@@ -3,10 +3,11 @@ package Algorithm
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.{SparkContext, SparkConf}
 import org.apache.spark.graphx._
-import scala.collection.mutable.{Buffer,Set,Map}
+import  scala.collection.mutable.{Buffer,Set,Map}
 import org.apache.spark.rdd.RDD.rddToPairRDDFunctions
+import org.apache.spark.rdd.RDD
  
-object Tarjan{
+object Tarjan {
   private var edgeMap: scala.collection.mutable.Map[Long, List[Long]] = scala.collection.mutable.Map[Long, List[Long]]()
   
 //  private val st = Buffer.empty[Int]
@@ -28,8 +29,8 @@ object Tarjan{
  
     val graph = GraphLoader.edgeListFile(sc, "xrli/scctest.txt")
  
-    println("vertices is : " + graph.vertices)
-    println("edges is : " + graph.edges)
+   //println("vertices is : " + graph.vertices)
+    //println("edges is : " + graph.edges)
     
 //    val a = graph.edges.map{x => (x.srcId.toLong, x.dstId.toLong)}.combineByKey(
 //      (v : Long) => List(v),
@@ -95,7 +96,7 @@ object Tarjan{
         st_set -= w
       }
 
-      if(scc.size>1)   //自己加的
+      if(scc.size>1)
         result += scc
     }
   }
@@ -106,5 +107,55 @@ object Tarjan{
      
   result
 }
+ 
+ 
+ def tarjan_anyType[TP](g: Map[TP, List[TP]])= {
+  val stack = collection.mutable.Stack[TP]() 
+  val index = Map.empty[TP, Int]
+  val lowl = Map.empty[TP, Int]
+  val result = Buffer.empty[Buffer[TP]]
+  var time = 0;
+
+  def visit(v: TP): Unit = {
+    index(v) = time
+    lowl(v) = time
+    time =time+1
+    stack.push(v)
+  
+
+    for (w <- g(v)) {
+      if (!index.contains(w)) {
+        visit(w)
+        lowl(v) = math.min(lowl(w), lowl(v))
+      } else if (stack.contains(w)) {
+        lowl(v) = math.min(lowl(v), index(w))
+      }
+    }
+
+    if (lowl(v) == index(v)) {
+      val scc = Buffer.empty[TP]
+       
+      var over = false
+      while(!over) {
+        var p = stack.pop()
+        scc += p
+        if(v == p)
+          over = true
+      }
+ 
+      if(scc.size>1)
+        result += scc
+    }
+  }
+
+  for (v <- g.keys) 
+    if (!lowl.contains(v)) 
+      visit(v)
+     
+  result
+}
+ 
+ 
+  
   
 }

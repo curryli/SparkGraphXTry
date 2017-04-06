@@ -49,11 +49,6 @@ object scc_Load {
     println("vertice num is : " + graph.numVertices)
     println("edge num is : " + graph.numEdges)
 
-    val edgeMaps = graph.edges.map{x => (x.srcId.toInt, x.dstId.toInt)}.combineByKey(
-      (v : Int) => List(v),
-      (c : List[Int], v : Int) => v :: c,
-      (c1 : List[Int], c2 : List[Int]) => c1 ::: c2
-    )
     
     var g = scala.collection.mutable.Map[Int, List[Int]]()
 
@@ -62,7 +57,14 @@ object scc_Load {
       g += (v -> Nil)
     }
  
-    edgeMaps.collect().map{m =>
+    
+    val edgeRdd = graph.edges.map{x => (x.srcId.toInt, x.dstId.toInt)}.combineByKey(
+      (v : Int) => List(v),
+      (c : List[Int], v : Int) => v :: c,
+      (c1 : List[Int], c2 : List[Int]) => c1 ::: c2
+    )
+    
+    edgeRdd.collect().map{m =>
       g += (m._1 -> m._2)
     }
     
