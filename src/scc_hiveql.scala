@@ -58,7 +58,7 @@ object scc_hiveql {
       s"cast (trans_at as int) as money, " +
       s"to_ts " +
       s"from 00010000_default.tbl_poc_test " +
-      s" where trans_at is not null and trans_at>100000 and tfr_in_acct_no is not null and tfr_out_acct_no is not null and to_ts is not null").repartition(10).cache()
+      s" where trans_at is not null and trans_at>10000 and tfr_in_acct_no is not null and tfr_out_acct_no is not null and to_ts is not null").repartition(10).cache()
 
       println("SQL done in " + (System.currentTimeMillis()-startTime)/(1000*60) + " minutes.")
       
@@ -129,7 +129,7 @@ object scc_hiveql {
 
 ////////////////////////////////////////////////////4 Tarjan算法计算强联通图////////////////////////////////////////////////////////////
     println("current vertice num is : " + gV2.numVertices)
-    println("current edge num is : " + gV2.numVertices)
+    println("current edge num is : " + gV2.numEdges)
     
     var gMap = scala.collection.mutable.Map[Long, List[Long]]()
 
