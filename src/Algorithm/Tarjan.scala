@@ -3,12 +3,12 @@ package Algorithm
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.{SparkContext, SparkConf}
 import org.apache.spark.graphx._
-import  scala.collection.mutable.{Buffer,Set,Map}
+import scala.collection.mutable.{Buffer,Set,Map}
 import org.apache.spark.rdd.RDD.rddToPairRDDFunctions
 import org.apache.spark.rdd.RDD
  
 object Tarjan {
-  private var edgeMap: scala.collection.mutable.Map[Long, List[Long]] = scala.collection.mutable.Map[Long, List[Long]]()
+//private var edgeMap: scala.collection.mutable.Map[Long, List[Long]] = scala.collection.mutable.Map[Long, List[Long]]()
   
 //  private val st = Buffer.empty[Int]
 //  private val st_set = Set.empty[Int]

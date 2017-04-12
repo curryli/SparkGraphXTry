@@ -17,7 +17,7 @@ import scala.collection.mutable.{Buffer,Set,Map}
 import org.apache.spark.rdd.RDD.rddToPairRDDFunctions
 import Algorithm._
 
-object scc_hiveql {
+object Maped_scc_card {
   class VertexProperty()
   class EdgePropery()
 
@@ -125,6 +125,15 @@ object scc_hiveql {
     //根据顶点的出入度，筛选顶点:边和点剩余15%
     val gV2 = gV1.subgraph(vpred = (id, card) => !(card.inDgr == 0 && card.outDgr == 0))
 
+    
+    val cardmap_Rdd = gV2.vertices.map(v => (v._1.toLong, v._2.priAcctNo))
+    val cardmap = scala.collection.mutable.Map[Long, String]()
+      
+    cardmap_Rdd.collect().foreach{p=>
+      cardmap.put(p._1, p._2)
+    }
+    
+    cardmap.foreach(println)
 ////////////////////////////////////////////////////4 Tarjan算法计算强联通图////////////////////////////////////////////////////////////
     println("current vertice num is : " + gV2.numVertices)
     println("current edge num is : " + gV2.numEdges)
@@ -150,9 +159,17 @@ object scc_hiveql {
     val scc_buffers = Tarjan.tarjan_anyType(gMap)
     println("Tarjan done in " + (System.currentTimeMillis()-startTime)/(1000*60) + " minutes.")
     
-    val scc_rdd = sc.parallelize(scc_buffers, 1).map { xbuff => (xbuff.size, xbuff) }.sortBy(f => f._1, false)
-    scc_rdd.map(x=>(x._1, x._2))
-    scc_rdd.saveAsTextFile("xrli/sscRddFile")
+    val scc_rdd = sc.parallelize(scc_buffers).map { xbuff => 
+      val len = xbuff.size
+      var cardlist = List[String]() 
+      for(i<- xbuff) { cardlist = cardlist.::(cardmap(i))}
+      //println(cardlist)
+      (len, cardlist)
+    }
+    
+    scc_rdd.sortBy(f => f._1, false).saveAsTextFile("xrli/sscRddFile")
+    //scc_rdd.map(x=>(x._1, x._2))
+    //scc_rdd.saveAsTextFile("xrli/sscRddFile")
     
     
     
