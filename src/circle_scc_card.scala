@@ -1,4 +1,4 @@
-//stackoverflow，，有错误
+//太慢
 
 import org.apache.log4j.Level
 import org.apache.log4j.Logger
@@ -19,20 +19,20 @@ import scala.collection.mutable.{Buffer,Set,Map}
 import org.apache.spark.rdd.RDD.rddToPairRDDFunctions
 import Algorithm._
 
-object scc_hive_card {
+object circle_scc_card {
   class VertexProperty()
   class EdgePropery()
 
   //顶点: 卡片，属性：id, 帐号，
   case class CardVertex(val priAcctNo: String, val inDgr: Int, val outDgr: Int) extends VertexProperty
 
-  case class TransferProperty(val src_card: String, val dst_card: String, val transAt: Int, val transDt: String) extends EdgePropery
-
-  // The graph might then have the type:
-  var graph: Graph[VertexProperty, EdgePropery] = null
+  case class TransferProperty(val transAt: Int, val transDt: String) extends EdgePropery
+ 
+  private var trace = MutableList[Long]()
+  var visited:scala.collection.mutable.Map[Long,Boolean] = scala.collection.mutable.Map[Long,Boolean]()
+  
 
   def main(args: Array[String]): Unit = {
-
     Logger.getLogger("org").setLevel(Level.ERROR);
     Logger.getLogger("akka").setLevel(Level.ERROR);
     Logger.getLogger("hive").setLevel(Level.ERROR);
@@ -40,19 +40,24 @@ object scc_hive_card {
 
     //    require(args.length == 3)
 
-    val conf = new SparkConf().setAppName("scc_hive_card")
+    val conf = new SparkConf().setAppName("Graphx Test")
     val sc = new SparkContext(conf)
     val hc = new HiveContext(sc)
     val sqlContext = new SQLContext(sc)
     val startTime = System.currentTimeMillis(); 
-     
+    
+    //    var data = hc.sql(s"select tfr_in_acct_no,tfr_out_acct_no,default.md5_int(tfr_in_acct_no) as tfr_in_acct_no_id, default.md5_int(tfr_out_acct_no) as tfr_out_acct_no_id,trans_at  from tbl_common_his_trans where " +
+    //      s"unix_timestamp(trans_dt_tm,'yyyyMMddHHmmss') > unix_timestamp('20161001','yyyyMMdd')  and " +
+    //      s"unix_timestamp(trans_dt_tm,'yyyyMMddHHmmss') < unix_timestamp('20160601','yyyyMMdd')  and " +
+    //      s"trans_id='S33'")
+
     val data = hc.sql(s"select " +
       s"tfr_in_acct_no," +
       s"tfr_out_acct_no," +
       s"cast (trans_at as int) as money, " +
       s"to_ts " +
       s"from 00010000_default.tbl_poc_test " +
-      s" where trans_at is not null and trans_at>100000 and tfr_in_acct_no is not null and tfr_out_acct_no is not null and to_ts is not null").repartition(10).cache()
+      s" where trans_at is not null and trans_at>10000000 and tfr_in_acct_no is not null and tfr_out_acct_no is not null and to_ts is not null").repartition(10).cache()
 
       println("SQL done in " + (System.currentTimeMillis()-startTime)/(1000*60) + " minutes.")
       
@@ -66,7 +71,7 @@ object scc_hive_card {
       r =>
         val srcId = HashEncode.HashMD5(r.getString(0))
         val dstId = HashEncode.HashMD5(r.getString(1))
-        val item = new TransferProperty(r.getString(0), r.getString(1) , r.getInt(2), r.getString(3)) //金额、时间
+        val item = new TransferProperty(r.getInt(2), r.getString(3)) //金额、时间
         Edge(srcId, dstId, item) // srcId,destId
     }
 
@@ -93,7 +98,7 @@ object scc_hive_card {
     var g = Graph(cardRDD, transferRelationRDD).partitionBy(PartitionStrategy.RandomVertexCut)
 
     //3.1  边聚合
-    g = g.groupEdges((a, b) => new TransferProperty(a.src_card, a.dst_card, a.transAt+b.transAt, a.transDt))
+    g = g.groupEdges((a, b) => new TransferProperty(a.transAt+b.transAt, a.transDt))
 
     //3.2 计算出入度
     val degreeGraph = g.outerJoinVertices(g.inDegrees) {
@@ -125,17 +130,17 @@ object scc_hive_card {
     println("current vertice num is : " + gV2.numVertices)
     println("current edge num is : " + gV2.numEdges)
     
-    var gMap = scala.collection.mutable.Map[String, List[String]]()
+    var gMap = scala.collection.mutable.Map[Long, List[Long]]()
 
-    val vRdd = gV2.vertices.map(f=>f._2.priAcctNo)
+    val vRdd = gV2.vertices.map(f=>f._1.toLong)
     vRdd.collect().map{v=>
       gMap += (v -> Nil)
     }
  
-    val edgeRdd = gV2.edges.map{x => (x.attr.src_card, x.attr.dst_card)}.combineByKey(
-      (v : String) => List(v),
-      (c : List[String], v : String) => v :: c,
-      (c1 : List[String], c2 : List[String]) => c1 ::: c2
+    val edgeRdd = gV2.edges.map{x => (x.srcId.toLong, x.dstId.toLong)}.combineByKey(
+      (v : Long) => List(v),
+      (c : List[Long], v : Long) => v :: c,
+      (c1 : List[Long], c2 : List[Long]) => c1 ::: c2
     )
     
     edgeRdd.collect().map{m =>
@@ -146,19 +151,80 @@ object scc_hive_card {
     val scc_buffers = Tarjan.tarjan_anyType(gMap)
     println("Tarjan done in " + (System.currentTimeMillis()-startTime)/(1000*60) + " minutes.")
     
-    val scc_rdd = sc.parallelize(scc_buffers, 1).map { xbuff => (xbuff.size, xbuff) }.sortBy(f => f._1, false)
-    scc_rdd.map(x=>(x._1, x._2))
-    scc_rdd.saveAsTextFile("xrli/ssc_cards")
+   
+     scc_buffers.foreach { xbuff => 
+      val len = xbuff.size
+      var cardlist = List[Long]() 
+      for(i<- xbuff) { cardlist = cardlist.::(i)}
+
+      val testGraph = gV2.subgraph(vpred = (id, card) => cardlist.contains(id.toLong))
+      visited.clear()
+      trace.clear()
+ 
+      val gV_test = testGraph.vertices 
+      val gE_test = testGraph.edges
+      //gE.collect().foreach {println}
+   
+      val gVList = gV_test.collect          //要先转化成数组，不要在RDD的foreach里面复制，否则不起任何作用
+      gVList.foreach{vp=>    //初始化
+        visited += (vp._1.toLong -> false)
+     }
+ 
+        
+     val startPoint = gV_test.first()._1.toLong
     
+     println("Starting find from " + startPoint + ": ")
+     findCycle(sc, startPoint, gV_test, gE_test)
+      
+    } 
     
-    
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
      
     println("All done in " + (System.currentTimeMillis()-startTime)/(1000*60) + " minutes.")
   }
   
   
   
+ def findCycle(sc: SparkContext, Vid: Long, gV: VertexRDD[CardVertex], gE: EdgeRDD[TransferProperty]) 
+    {
+//        println("current visited: ")
+//        visited.foreach(println)
+        //val v = mapRDD.lookup(Vid)(0)
+        if(visited(Vid)==true)
+        {
+            
+            if(trace.contains(Vid))
+            {
+                //println("In find " + v.toInt)
+                var j = trace.indexOf(Vid)
+                println("Cycle:");
+                while(j<trace.length)
+                {
+                    print(trace(j)+" ");
+                    j = j+1;
+                }
+                println("\n");
+                return;
+            }
+            return;
+        }
+        
+        //println("current Vid: " + Vid)
+        visited(Vid)=true;
+        trace.+=(Vid);
+        
+        val Vlist = gV.collect()
+        
+        Vlist.foreach{rdd=> 
+          var new_vid = rdd._1.toLong
+          //println("i is : " + i)
+          val pairs = gE.map(e=>(e.srcId,e.dstId))
+          if(pairs.filter(f=>f._1==Vid & f._2==new_vid).count!=0)
+                findCycle(sc,new_vid.toLong, gV, gE);
+        }
+  
+        //println(trace)
+        trace = trace.dropRight(1);
+    }
   
   
   

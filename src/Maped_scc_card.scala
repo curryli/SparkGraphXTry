@@ -124,7 +124,7 @@ object Maped_scc_card {
     
     //根据顶点的出入度，筛选顶点:边和点剩余15%
     val gV2 = gV1.subgraph(vpred = (id, card) => !(card.inDgr == 0 && card.outDgr == 0))
-
+ 
     
     val cardmap_Rdd = gV2.vertices.map(v => (v._1.toLong, v._2.priAcctNo))
     val cardmap = scala.collection.mutable.Map[Long, String]()
