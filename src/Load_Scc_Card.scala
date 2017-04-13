@@ -74,18 +74,24 @@ object Load_Scc_Card {
   
     // 定义一个默认用户，避免有不存在用户的关系  
     val graph = Graph(verticeRDD, edgeRDD) 
+    println("Load done in " + (System.currentTimeMillis()-startTime) + " ms.")
     println("graph.numEdges is " + graph.numEdges)
 
 //678856664375130 CardVertex(ef10ce9243bbbc7ca1aa73a3c831ea1a,3,0)
 //50323566228396  CardVertex(2d7e9ea68b99f5f700e90828726886af,1,0)
 //6788115067      776216246887956 TransferProperty(3ce2d9f44086c6a1bb24c7c0d8225d06,1fc62cc1d8b0c82029f16d7d8b023932,540000,2016-11-03 12:42:09.0)
 //10637919657     108970919512408 TransferProperty(dc7e3fe5dacc0eca799a5d8bbd80ab76,aec9402f561547eeeb660bcba6e96973,1000000,2016-11-01 10:40:58.0)
-
-   val tmpgraph = graph.subgraph(epred = triplet => (triplet.attr.src_card.equals("cc8d24a0d7b97c54b189abb97a1996f6") || triplet.attr.dst_card.equals("cc8d24a0d7b97c54b189abb97a1996f6")))
-   println("tmpgraph.numEdges is " + tmpgraph.numEdges)
    
-   tmpgraph.edges.collect().foreach { println}
-   println("All done in " + (System.currentTimeMillis()-startTime)/(1000*60) + " minutes.")
+   var testcardlist = List[String]()  //千万注意testcardlist = testcardlist.::(elem) 这种形式，注意重新赋值，否则添加不了元素
+   testcardlist = testcardlist.::("2c0dec0e316665d0365ffa72042efc0c")  
+   testcardlist = testcardlist.::("05cedfc8a85df0dd3783b7fa745bdf23")
+   testcardlist = testcardlist.::("cc8d24a0d7b97c54b189abb97a1996f6")
+     
+   val tmpgraph = graph.subgraph(epred = triplet => (testcardlist.contains(triplet.attr.src_card) || testcardlist.contains(triplet.attr.dst_card)))
+   //println("tmpgraph.numEdges is " + tmpgraph.numEdges)
+   
+   tmpgraph.edges.collect().foreach {println}
+   println("All done in " + (System.currentTimeMillis()-startTime) + " ms.")
   }
   
   
