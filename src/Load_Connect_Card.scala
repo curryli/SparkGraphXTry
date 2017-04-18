@@ -17,7 +17,7 @@ import scala.collection.mutable.{Buffer,Set,Map}
 import org.apache.spark.rdd.RDD.rddToPairRDDFunctions
 import Algorithm._
 
-object Load_Scc_Card {
+object Load_Connect_Card {
   class VertexProperty()
   class EdgePropery()
 
@@ -43,8 +43,8 @@ object Load_Scc_Card {
     val sqlContext = new SQLContext(sc)
     val startTime = System.currentTimeMillis(); 
     
-    val verticefile = sc.textFile("xrli/POC/scc_10_vertices")//.persist(StorageLevel.MEMORY_AND_DISK_SER)
-    val edgefile = sc.textFile("xrli/POC/scc_10_edges")//.persist(StorageLevel.MEMORY_AND_DISK_SER)
+    val verticefile = sc.textFile("xrli/POC/cc_10_vertices")//.persist(StorageLevel.MEMORY_AND_DISK_SER)
+    val edgefile = sc.textFile("xrli/POC/cc_10_edges")//.persist(StorageLevel.MEMORY_AND_DISK_SER)
     
  
     val verticeRDD = verticefile.map { line=>
@@ -75,42 +75,19 @@ object Load_Scc_Card {
     // 定义一个默认用户，避免有不存在用户的关系  
     val graph = Graph(verticeRDD, edgeRDD) 
     println("Load done in " + (System.currentTimeMillis()-startTime) + " ms.")
-    println("graph.numEdges is " + graph.numEdges)
+    //println("graph.numEdges is " + graph.numEdges)
 
-//678856664375130 CardVertex(ef10ce9243bbbc7ca1aa73a3c831ea1a,3,0)
-//50323566228396  CardVertex(2d7e9ea68b99f5f700e90828726886af,1,0)
-//6788115067      776216246887956 TransferProperty(3ce2d9f44086c6a1bb24c7c0d8225d06,1fc62cc1d8b0c82029f16d7d8b023932,540000,2016-11-03 12:42:09.0)
-//10637919657     108970919512408 TransferProperty(dc7e3fe5dacc0eca799a5d8bbd80ab76,aec9402f561547eeeb660bcba6e96973,1000000,2016-11-01 10:40:58.0)
-   
-   
-//   var testcardlist = List[String]()  //千万注意testcardlist = testcardlist.::(elem) 这种形式，注意重新赋值，否则添加不了元素
-//   testcardlist = testcardlist.::("8a729949feeff52668994cd6e9aaffb8")  
-//   testcardlist = testcardlist.::("6cabc342bf4ce5bdab5493ae4fb26685")
-//   testcardlist = testcardlist.::("f5bf9cf5cfef632e84eda367f8acefe8")
-   
-   
-   
-   
-   val POC1file = sc.textFile("xrli/POC/POC1.txt") 
-    // 读入时指定编码  
-    val rdd1 = POC1file.map(line => line.split(",")(0).trim)                //.map(item => item(0))         
-    val rdd2 = POC1file.map(line => line.split(",")(1).trim)
-    val testcardlist = rdd1.union(rdd2).distinct().collect()
-   
-   
-   
-   
-   
-   
-   
-   
-    //查找与testcardlist直接交易的相关交易
-   val tmpgraph1 = graph.subgraph(epred = triplet => (testcardlist.contains(triplet.attr.src_card) || testcardlist.contains(triplet.attr.dst_card)))
-   //println("tmpgraph.numEdges is " + tmpgraph.numEdges)
-   println("tmpgraph1 is :")
-   tmpgraph1.edges.collect().foreach {println}
+    val POCFaninFile = sc.textFile("xrli/POC/FI0321.csv")//.persist(StorageLevel.MEMORY_AND_DISK_SER)
+    val rdd1 = POCFaninFile.map(line => line.split(",")(0).trim)                //.map(item => item(0))         
+    val rdd2 = POCFaninFile.map(line => line.split(",")(1).trim)
+    val POCCardRDD = rdd1.union(rdd2).distinct()
+     
+    val loadedvrdd = graph.vertices.map{f => f._2}
+    val interRdd = loadedvrdd.intersection(POCCardRDD)
+    println("POCCardRDD num is :" + POCCardRDD.count())
+    println("interRdd num is :" + interRdd.count())
     
-   
+    POCCardRDD.subtract(loadedvrdd).collect().foreach(println)
     
    println("All done in " + (System.currentTimeMillis()-startTime) + " ms.")
   }

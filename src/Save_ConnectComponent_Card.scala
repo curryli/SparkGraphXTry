@@ -17,7 +17,7 @@ import scala.collection.mutable.{Buffer,Set,Map}
 import org.apache.spark.rdd.RDD.rddToPairRDDFunctions
 import Algorithm._
 
-object Save_Scc_Card {
+object Save_ConnectComponent_Card {
   class VertexProperty()
   class EdgePropery()
 
@@ -27,9 +27,8 @@ object Save_Scc_Card {
   case class TransferProperty(val src_card: String, val dst_card: String, val transAt: Int, val transDt: String) extends EdgePropery
  
  
-
+ 
   def main(args: Array[String]): Unit = {
-
     Logger.getLogger("org").setLevel(Level.ERROR);
     Logger.getLogger("akka").setLevel(Level.ERROR);
     Logger.getLogger("hive").setLevel(Level.ERROR);
@@ -42,19 +41,14 @@ object Save_Scc_Card {
     val hc = new HiveContext(sc)
     val sqlContext = new SQLContext(sc)
     val startTime = System.currentTimeMillis(); 
-    
-    //    var data = hc.sql(s"select tfr_in_acct_no,tfr_out_acct_no,default.md5_int(tfr_in_acct_no) as tfr_in_acct_no_id, default.md5_int(tfr_out_acct_no) as tfr_out_acct_no_id,trans_at  from tbl_common_his_trans where " +
-    //      s"unix_timestamp(trans_dt_tm,'yyyyMMddHHmmss') > unix_timestamp('20161001','yyyyMMdd')  and " +
-    //      s"unix_timestamp(trans_dt_tm,'yyyyMMddHHmmss') < unix_timestamp('20160601','yyyyMMdd')  and " +
-    //      s"trans_id='S33'")
-
+ 
     val data = hc.sql(s"select " +
-      s"tfr_in_acct_no," +
       s"tfr_out_acct_no," +
+      s"tfr_in_acct_no," +
       s"cast (trans_at as int) as money, " +
       s"to_ts " +
       s"from 00010000_default.tbl_poc_test " +
-      s" where trans_at is not null and trans_at>100000 and tfr_in_acct_no is not null and tfr_out_acct_no is not null and to_ts is not null").repartition(10).cache()
+      s" where trans_at is not null and trans_at>1000 and tfr_in_acct_no is not null and tfr_out_acct_no is not null and to_ts is not null").repartition(10).cache()
 
       println("SQL done in " + (System.currentTimeMillis()-startTime)/(1000*60) + " minutes.")
       
@@ -68,21 +62,20 @@ object Save_Scc_Card {
       r =>
         val srcId = HashEncode.HashMD5(r.getString(0))
         val dstId = HashEncode.HashMD5(r.getString(1))
-        val item = new TransferProperty(r.getString(0), r.getString(1) , r.getInt(2), r.getString(3)) //金额、时间
+        val item = new TransferProperty( r.getString(0), r.getString(1) , r.getInt(2), r.getString(3)) //金额、时间
         Edge(srcId, dstId, item) // srcId,destId
     }
 
     //2.构建顶点：
-
-    //2.1 转入卡
-    val inCardRDD = data.map {
+ 
+    val outCardRDD = data.map {
       r =>
         val item = new CardVertex(r.getString(0), 0, 0)
         (HashEncode.HashMD5(r.getString(0)), item) //destId
     }
 
-    //2.2 转出卡
-    val outCardRDD = data.map {
+     
+    val inCardRDD = data.map {
       r =>
         val item = new CardVertex(r.getString(1), 0, 0)
         (HashEncode.HashMD5(r.getString(1)), item) //srcId
@@ -94,9 +87,10 @@ object Save_Scc_Card {
     //3. 构建图
     var g = Graph(cardRDD, transferRelationRDD).partitionBy(PartitionStrategy.RandomVertexCut)
 
+
     //3.1  边聚合
-    g = g.groupEdges((a, b) => new TransferProperty(a.src_card, a.dst_card, a.transAt+b.transAt, a.transDt))
-    
+    g = g.groupEdges((a, b) => new TransferProperty(a.src_card, a.dst_card,a.transAt+b.transAt, a.transDt))
+
     //3.2 计算出入度
     val degreeGraph = g.outerJoinVertices(g.inDegrees) {
       (id, v, inDegOpt) => CardVertex(v.priAcctNo, inDegOpt.getOrElse(0), v.outDgr)
@@ -118,25 +112,52 @@ object Save_Scc_Card {
       (id, v, outDegOpt) => CardVertex(v.priAcctNo, v.inDgr, outDegOpt.getOrElse(0))
     }
 
-    println("gV1 done in " + (System.currentTimeMillis()-startTime)/(1000*60) + " minutes.")
-    
     //根据顶点的出入度，筛选顶点:边和点剩余15%
-    val gV2 = gV1.subgraph(vpred = (id, card) => !(card.inDgr == 0 && card.outDgr == 0))
- 
+    val gV2 = gV1.subgraph(vpred = (id, card) => !(card.inDgr == 0 && card.outDgr == 0)).cache()
+    data.unpersist()
+
+    //4 计算联通图
+   
+    val cGraph = ConnectedComponents.run(gV2)
+     
+    //    
+    val ccgraph = gV2.outerJoinVertices(cGraph.vertices){
+      (vid, tempProperty, connectedOpt) => (tempProperty, connectedOpt.getOrElse(0L))
+    }
+    // ccgraph   (vid,顶点属性，对应团体)
+    
+//    val verticeStr = ccgraph.vertices.map{vp =>
+//      val cc = vp._2._2
+//      val card = vp._2._1.priAcctNo
+//      vp._1 +"," + cc +"," + card
+//    }
+//    //50323566228396,50323566228396,2d7e9ea68b99f5f700e90828726886af     卡号id， 团体id 卡号名
+//    verticeStr.saveAsTextFile("xrli/POC/cc_10_verticeStr")
+    
+    
     //保存数据
-    gV2.vertices.map(vp => vp._1.toString() + "\t" + vp._2.toString()).saveAsTextFile("xrli/POC/scc_1000_vertices")
-    gV2.edges.map(ep => ep.srcId.toString() + "\t" + ep.dstId.toString() + "\t" + ep.attr.toString()).saveAsTextFile("xrli/POC/scc_1000_edges")
+    //(869004002626858,(CardVertex(5db0180f8a2bb3a17f0a48276ad1bb0a,2,0),275790015286939))
+//  卡号，                                                                                            卡号名，入度 ，出度     对应团体                
+    ccgraph.vertices.map{vp =>
+      val vid = vp._1
+      val vprop = vp._2._1
+      val cid = vp._2._2
+      vid +"\t" + vprop +"\t" + cid
+    }.saveAsTextFile("xrli/POC/cc_10_vertices")
+                       
+    
+ //Edge(6788115067,776216246887956,TransferProperty(3ce2d9f44086c6a1bb24c7c0d8225d06,1fc62cc1d8b0c82029f16d7d8b023932,540000,2016-11-03 12:42:09.0))   
+    ccgraph.edges.map{ep =>
+      val srcid = ep.srcId
+      val dstid = ep.dstId
+      val eprop = ep.attr
+      srcid +"\t" + dstid +"\t" + eprop
+    }.saveAsTextFile("xrli/POC/cc_10_edges")
     
     //想要把顶点和边的信息全部加载的时候参考TransNet.LoadBigHash。  只想加载边信时使用LoadSccCard.scala
-
-    println("graph save done in " + (System.currentTimeMillis()-startTime)/(1000*60) + " minutes.")
-     
+    
     println("All done in " + (System.currentTimeMillis()-startTime)/(1000*60) + " minutes.")
+  
+
   }
-  
-  
-  
-  
-  
-  
 }
