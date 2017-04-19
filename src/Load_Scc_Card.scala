@@ -91,7 +91,7 @@ object Load_Scc_Card {
    
    
    
-   val POC1file = sc.textFile("xrli/POC/POC1.txt") 
+   val POC1file = sc.textFile("xrli/POC/POC1.txt")  //19ba84e6dfa4076d630a87aea9830547,f5bf9cf5cfef632e84eda367f8acefe8,50000
     // 读入时指定编码  
     val rdd1 = POC1file.map(line => line.split(",")(0).trim)                //.map(item => item(0))         
     val rdd2 = POC1file.map(line => line.split(",")(1).trim)

@@ -1,5 +1,3 @@
-//stackoverflow，，有错误
-
 import org.apache.log4j.Level
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
@@ -19,7 +17,7 @@ import scala.collection.mutable.{Buffer,Set,Map}
 import org.apache.spark.rdd.RDD.rddToPairRDDFunctions
 import Algorithm._
 
-object scc_hive_card {
+object Save_prepare_graph {
   class VertexProperty()
   class EdgePropery()
 
@@ -27,9 +25,8 @@ object scc_hive_card {
   case class CardVertex(val priAcctNo: String, val inDgr: Int, val outDgr: Int) extends VertexProperty
 
   case class TransferProperty(val src_card: String, val dst_card: String, val transAt: Int, val transDt: String) extends EdgePropery
-
-  // The graph might then have the type:
-  var graph: Graph[VertexProperty, EdgePropery] = null
+ 
+ 
 
   def main(args: Array[String]): Unit = {
 
@@ -40,15 +37,20 @@ object scc_hive_card {
 
     //    require(args.length == 3)
 
-    val conf = new SparkConf().setAppName("scc_hive_card")
+    val conf = new SparkConf().setAppName("Graphx Test")
     val sc = new SparkContext(conf)
     val hc = new HiveContext(sc)
     val sqlContext = new SQLContext(sc)
     val startTime = System.currentTimeMillis(); 
-     
+    
+    //    var data = hc.sql(s"select tfr_in_acct_no,tfr_out_acct_no,default.md5_int(tfr_in_acct_no) as tfr_in_acct_no_id, default.md5_int(tfr_out_acct_no) as tfr_out_acct_no_id,trans_at  from tbl_common_his_trans where " +
+    //      s"unix_timestamp(trans_dt_tm,'yyyyMMddHHmmss') > unix_timestamp('20161001','yyyyMMdd')  and " +
+    //      s"unix_timestamp(trans_dt_tm,'yyyyMMddHHmmss') < unix_timestamp('20160601','yyyyMMdd')  and " +
+    //      s"trans_id='S33'")
+
     val data = hc.sql(s"select " +
-      s"tfr_in_acct_no," +
       s"tfr_out_acct_no," +
+      s"tfr_in_acct_no," +
       s"cast (trans_at as int) as money, " +
       s"to_ts " +
       s"from 00010000_default.tbl_poc_test " +
@@ -94,7 +96,7 @@ object scc_hive_card {
 
     //3.1  边聚合
     g = g.groupEdges((a, b) => new TransferProperty(a.src_card, a.dst_card, a.transAt+b.transAt, a.transDt))
-
+    
     //3.2 计算出入度
     val degreeGraph = g.outerJoinVertices(g.inDegrees) {
       (id, v, inDegOpt) => CardVertex(v.priAcctNo, inDegOpt.getOrElse(0), v.outDgr)
@@ -120,39 +122,14 @@ object scc_hive_card {
     
     //根据顶点的出入度，筛选顶点:边和点剩余15%
     val gV2 = gV1.subgraph(vpred = (id, card) => !(card.inDgr == 0 && card.outDgr == 0))
-
-////////////////////////////////////////////////////4 Tarjan算法计算强联通图////////////////////////////////////////////////////////////
-    println("current vertice num is : " + gV2.numVertices)
-    println("current edge num is : " + gV2.numEdges)
-    
-    var gMap = scala.collection.mutable.Map[String, List[String]]()
-
-    val vRdd = gV2.vertices.map(f=>f._2.priAcctNo)
-    vRdd.collect().map{v=>
-      gMap += (v -> Nil)
-    }
  
-    val edgeRdd = gV2.edges.map{x => (x.attr.src_card, x.attr.dst_card)}.combineByKey(
-      (v : String) => List(v),
-      (c : List[String], v : String) => v :: c,
-      (c1 : List[String], c2 : List[String]) => c1 ::: c2
-    )
+    //保存数据
+    gV2.vertices.map(vp => vp._1.toString() + "\t" + vp._2.toString()).saveAsTextFile("xrli/POC/prepare_1000_vertices")
+    gV2.edges.map(ep => ep.srcId.toString() + "\t" + ep.dstId.toString() + "\t" + ep.attr.toString()).saveAsTextFile("xrli/POC/prepare_1000_edges")
     
-    edgeRdd.collect().map{m =>
-      gMap += (m._1 -> m._2)
-    }
+    //想要把顶点和边的信息全部加载的时候参考TransNet.LoadBigHash。  只想加载边信时使用LoadSccCard.scala
 
-    //println(Tarjan.tarjan_anyType(gMap))
-    val scc_buffers = Tarjan.tarjan_anyType(gMap)
-    println("Tarjan done in " + (System.currentTimeMillis()-startTime)/(1000*60) + " minutes.")
-    
-    val scc_rdd = sc.parallelize(scc_buffers, 1).map { xbuff => (xbuff.size, xbuff) }.sortBy(f => f._1, false)
-    scc_rdd.map(x=>(x._1, x._2))
-    scc_rdd.saveAsTextFile("xrli/ssc_cards")
-    
-    
-    
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
+    println("graph save done in " + (System.currentTimeMillis()-startTime)/(1000*60) + " minutes.")
      
     println("All done in " + (System.currentTimeMillis()-startTime)/(1000*60) + " minutes.")
   }
