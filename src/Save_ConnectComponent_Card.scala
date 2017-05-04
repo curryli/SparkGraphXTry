@@ -45,10 +45,10 @@ object Save_ConnectComponent_Card {
     val data = hc.sql(s"select " +
       s"tfr_out_acct_no," +
       s"tfr_in_acct_no," +
-      s"cast (trans_at as int) as money, " +
+      s"cast (trans_at/100 as int) as money, " +
       s"to_ts " +
       s"from 00010000_default.tbl_poc_test " +
-      s" where trans_at is not null and trans_at>1000 and tfr_in_acct_no is not null and tfr_out_acct_no is not null and to_ts is not null").repartition(10).cache()
+      s" where trans_at is not null and trans_at>=500000 and tfr_in_acct_no is not null and tfr_out_acct_no is not null and to_ts is not null").repartition(10).cache()
 
       println("SQL done in " + (System.currentTimeMillis()-startTime)/(1000*60) + " minutes.")
       
@@ -89,7 +89,7 @@ object Save_ConnectComponent_Card {
 
 
     //3.1  边聚合
-    g = g.groupEdges((a, b) => new TransferProperty(a.src_card, a.dst_card,a.transAt+b.transAt, a.transDt))
+    g = g.groupEdges((a, b) => new TransferProperty(a.src_card, a.dst_card, a.transAt+b.transAt, a.transDt))
 
     //3.2 计算出入度
     val degreeGraph = g.outerJoinVertices(g.inDegrees) {
