@@ -25,7 +25,7 @@ object Pagerank_test {
     
     
      
-    val Convgraph = simple_Pagerank.runUntilConvergence(graph, tol=0.001, resetProb= 0.15)
+    val Convgraph = simple_Pagerank.runUntilConvergence(graph, tol=0.001,numIter=100, resetProb= 0.15)
     
     println("Show Convgraph:")
     Convgraph.vertices.collect().foreach(println) 

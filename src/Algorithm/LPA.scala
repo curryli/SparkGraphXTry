@@ -8,7 +8,7 @@ import scala.Iterator
 /** Label Propagation algorithm. */
 object LPA {
  
-  def run[VD, ED: ClassTag](graph: Graph[VD, ED], maxSteps: Int=1000): Graph[VertexId, ED] = {
+  def run[VD, ED: ClassTag](graph: Graph[VD, ED], maxSteps: Int=100): Graph[VertexId, ED] = {
     require(maxSteps > 0, s"Maximum of steps must be greater than 0, but got ${maxSteps}")
 
     val lpaGraph = graph.mapVertices { case (vid, _) => vid }  //初始化图定点属性，即LPA的标签，开始时每个顶点的标签为顶点id
@@ -16,8 +16,10 @@ object LPA {
     val initialMessage = Map[VertexId, Long]()
   
     //即消息发送函数，给所有相邻节点发送该节点的attr(即顶点label)之用，双向，从源顶点<---->目标定点
+    //原始的LPA算法的迭代停止条件应该是        判断当前所有标签和上上轮总标签的差别，如果差别很小则停止  （不用上轮是防止二部震荡）  这个需要需要全局判断，要在原始的pregel中修改源码。    
+ 
     def sendMessage(e: EdgeTriplet[VertexId, ED]): Iterator[(VertexId, Map[VertexId, Long])] = {
-      Iterator((e.srcId, Map(e.dstAttr -> 1L)), (e.dstId, Map(e.srcAttr -> 1L)))
+        Iterator((e.srcId, Map(e.dstAttr -> 1L)), (e.dstId, Map(e.srcAttr -> 1L))) 
     }
     
     //消息合并函数，对发送而来的消息进行merge，原理：对发送而来的Map，取Key进行合并，并对相同key的值进行累加操作
