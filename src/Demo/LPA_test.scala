@@ -19,17 +19,17 @@ object LPA_test {
     val sc = new SparkContext(conf)
     
     
-    val rdd = sc.makeRDD(Array("1 2","1 3","2 4","3 4","3 5","4 5","5 6","6 7","6 9","7 11","7 8","9 8","9 13","8 10","10 13","13 12","10 11","11 12"))
-    val edge =rdd .map( line =>{
-      val pair = line.split(" ")
-      Edge( pair(0).toLong,pair(1).toLong,1L )
-      })
-     
-    val graph = Graph.fromEdges( edge,0 )
+//    val rdd = sc.makeRDD(Array("1 2","1 3","2 4","3 4","3 5","4 5","5 6","6 7","6 9","7 11","7 8","9 8","9 13","8 10","10 13","13 12","10 11","11 12"))
+//    val edge =rdd .map( line =>{
+//      val pair = line.split(" ")
+//      Edge( pair(0).toLong,pair(1).toLong,1L )
+//      })
 //     
+//    val graph = Graph.fromEdges( edge,0 )
+////     
     
     
-  //  val graph: Graph[Int, Int] = GraphLoader.edgeListFile(sc, "xrli/graphx/testedges2.txt").cache
+    val graph: Graph[Int, Int] = GraphLoader.edgeListFile(sc, "xrli/graphx/testedges2.txt").cache
     
     val cgraph = LPA.run(graph)
     
